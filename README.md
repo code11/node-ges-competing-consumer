@@ -1,4 +1,4 @@
-# node-ges-competing-consumer (ges = Event Store)
+# node-ges-competing-consumer
 
 A Node.js utility for consuming [Get Event Store](https://geteventstore.com) Competing Consumer subscriptions using Event Store's HTTP API.
 
@@ -47,13 +47,13 @@ Tells the consumer to stop pulling. Returns a promise which resolves after all a
 ```js
 import CompetingConsumer from 'ges-competing-consumer'
 
-async function handler(event) {
+function handler(event) {
     //`event` is the raw event from Event Store
     //You can get the event data like this:
     let data = JSON.parse(event.data)
 
     //The consumer will wait until the `handler` function resolves before ack'ing to Event Store
-    await doImportantWork(data)
+    return doImportantWork(data) //returns a promise
 }
 
 let consumer = new CompetingConsumer('MyStream', 'my-group', handler, {
@@ -65,9 +65,11 @@ let consumer = new CompetingConsumer('MyStream', 'my-group', handler, {
 consumer.start()
 
 //Stop after 10 seconds
-setTimeout(async function() {
-    await consumer.stop()
-    console.log('Done for today!')
-    process.exit()
+setTimeout(function() {
+    consumer.stop()
+        .then(() => {
+            console.log('Done for today!')
+            process.exit()
+        })
 }, 10 * 1000)
 ```
