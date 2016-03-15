@@ -1,6 +1,6 @@
-# node-event-store-competing-consumer
+# node-ges-competing-consumer (ges = Event Store)
 
-A Node.js utility for consuming Event Store Competing Consumer subscriptions using Event Store's HTTP API.
+A Node.js utility for consuming [Get Event Store](https://geteventstore.com) Competing Consumer subscriptions using Event Store's HTTP API.
 
 
 ## Installation
@@ -8,14 +8,14 @@ A Node.js utility for consuming Event Store Competing Consumer subscriptions usi
 Available on npm:
 
 ```sh
-npm install event-store-competing-consumer
+npm install ges-competing-consumer
 ```
 
 ## Documentation
 
-### `let consumer = new EventStoreCompetingConsumer(stream, group, handler, options)`
+### `let consumer = new CompetingConsumer(stream, group, handler, options)`
 
-The `EventStoreCompetingConsumer` constructor takes the following arguments:
+The `CompetingConsumer` constructor takes the following arguments:
 
 - `stream`: The stream to consume.
 - `group`: The name of the configured subscription group.
@@ -45,7 +45,7 @@ Tells the consumer to stop pulling. Returns a promise which resolves after all a
 ## Usage example (ES6)
 
 ```js
-import EventStoreCompetingConsumer from 'event-store-competing-consumer'
+import CompetingConsumer from 'ges-competing-consumer'
 
 async function handler(event) {
     //`event` is the raw event from Event Store
@@ -56,7 +56,7 @@ async function handler(event) {
     await doImportantWork(data)
 }
 
-let consumer = new EventStoreCompetingConsumer('MyStream', 'my-group', handler, {
+let consumer = new CompetingConsumer('MyStream', 'my-group', handler, {
     eventStoreUrl: 'http://eventstore.example.com:2113',
     concurrency: 5
 })
