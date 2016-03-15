@@ -42,7 +42,7 @@ Will tell the consumer to start pulling from the subscription. Nothing happens u
 Tells the consumer to stop pulling. Returns a promise which resolves after all already active events have been handled and ack'ed. After the promise resolves it's safe to stop the Node process.
 
 
-## Usage example (ES6)
+## Usage example
 
 ```js
 import CompetingConsumer from 'ges-competing-consumer'
