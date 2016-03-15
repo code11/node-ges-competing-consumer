@@ -10,6 +10,5 @@ node_modules/babel-cli/bin/babel.js src --out-dir lib --source-maps inline
 TZ=UTC node_modules/.bin/mocha \
     --reporter list \
     --compilers js:babel-register \
-    --require test/bootstrap.js \
     --recursive \
     test

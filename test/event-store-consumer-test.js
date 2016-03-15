@@ -59,81 +59,106 @@ describe('EventStoreConsumer', function() {
         nock.enableNetConnect()
     })
 
-    it('requests, acks and nacks', async function() {
+    it('requests, acks and nacks', function() {
         let events = []
 
         //Setup consumer
-        let consumer = new EventStoreConsumer('MyStream', 'my-service', async function(event) {
+        let consumer = new EventStoreConsumer('MyStream', 'my-service', function(event) {
             events.push(event)
             if (event.eventId === 'ev2') {
-                throw new Error('Test error')
+                return Promise.reject(new Error('Test error'))
             }
-        }, {concurrency: 5})
+            return Promise.resolve()
+        }, {
+            concurrency: 5,
+            onError(e) {
+                if (e.message === 'Test error') {
+                    return
+                }
+                throw e
+            }
+        })
 
-        //Start it
+
         let req = expectRead(5, ['ev1', 'ev2'])
         let req2 = expectRead(3, [])
         let ackReq = expectAck('ev1')
         let nackReq = expectNack('ev2')
+
+        //Start it
         consumer.start()
-        await waitFor(consumer, 'drain')
-        req.done()
-        req2.done()
-        ackReq.done()
-        nackReq.done()
+        return waitFor(consumer, 'drain')
+            .then(() => {
+                req.done()
+                req2.done()
+                ackReq.done()
+                nackReq.done()
 
-        //Check events
-        expect(events.length).equal(2)
-        expect(events[0].eventId).equal('ev1')
-        expect(events[1].eventId).equal('ev2')
+                //Check events
+                expect(events.length).equal(2)
+                expect(events[0].eventId).equal('ev1')
+                expect(events[1].eventId).equal('ev2')
 
-        //Stop it
-        await consumer.stop()
+                //Stop it
+                return consumer.stop()
+            })
+
     })
 
-    it('polls continually', async function() {
+    it('polls continually', function() {
         //Setup consumer
-        let consumer = new EventStoreConsumer('MyStream', 'my-service', async function() {
+        let consumer = new EventStoreConsumer('MyStream', 'my-service', function() {
         }, {concurrency: 10})
 
-        //Start it
         let req = expectRead(10, [])
-        consumer.start()
-        await waitFor(consumer, 'poll')
-        req.done()
-
-        //Next poll
         let req2 = expectRead(10, [])
-        clock.tick(POLL_TIMEOUT)
-        await waitFor(consumer, 'poll')
-        req2.done()
-
-        //One more
         let req3 = expectRead(10, [])
-        clock.tick(POLL_TIMEOUT)
-        await waitFor(consumer, 'poll')
-        req3.done()
 
-        //Stop it
-        await consumer.stop()
+        //Start it
+        consumer.start()
+        return waitFor(consumer, 'poll')
+            .then(() => {
+                req.done()
+
+                //Next poll
+                clock.tick(POLL_DELAY)
+                return waitFor(consumer, 'poll')
+            })
+            .then(() => {
+                req2.done()
+
+                //One more
+                clock.tick(POLL_DELAY)
+                return waitFor(consumer, 'poll')
+            })
+            .then(() => {
+                req3.done()
+
+                //Stop it
+                return consumer.stop()
+            })
+
     })
 
-    it('eventStoreUrl option wins', async function() {
+    it('eventStoreUrl option wins', function() {
         //Setup consumer
-        let consumer = new EventStoreConsumer('MyStream', 'my-service', async function() {
+        let consumer = new EventStoreConsumer('MyStream', 'my-service', function() {
         }, {concurrency: 10, eventStoreUrl: 'http://override.eventstore.test:2113'})
 
-        //Start it
         let req = nock('http://override.eventstore.test:2113')
             .get('/subscriptions/MyStream/my-service/10?embed=Body')
             .reply(200, {
                 entries: []
             })
-        consumer.start()
-        await waitFor(consumer, 'poll')
-        req.done()
 
-        //Stop it
-        await consumer.stop()
+        //Start it
+        consumer.start()
+        return waitFor(consumer, 'poll')
+            .then(() => {
+                req.done()
+
+                //Stop it
+                return consumer.stop()
+            })
     })
 })
