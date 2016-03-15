@@ -1,6 +1,6 @@
 # node-ges-competing-consumer
 
-A Node.js utility for consuming [Get Event Store](https://geteventstore.com) Competing Consumer subscriptions using Event Store's HTTP API.
+A Node.js utility for consuming [(Get) Event Store](https://geteventstore.com) Competing Consumer subscriptions using Event Store's HTTP API.
 
 
 ## Installation
