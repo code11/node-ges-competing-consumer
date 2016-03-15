@@ -1,6 +1,6 @@
 {
   "name": "ges-competing-consumer",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A Node.js utility for consuming (Get) Event Store Competing Consumer subscriptions using Event Store's HTTP API.",
   "main": "lib/index.js",
   "author": "Sebastian Seilund <sebsei@gmail.com>",
