@@ -1,5 +1,5 @@
 {
-  "name": "event-store-consumer",
+  "name": "event-store-competing-consumer",
   "version": "0.0.0",
   "description": "A Node.js utility for consuming Event Store Competing Consumer subscriptions using Event Store's HTTP API.",
   "main": "lib/index.js",
@@ -7,7 +7,7 @@
   "license": "proprietary",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sebastianseilund/node-event-store-consumer.git"
+    "url": "https://github.com/sebastianseilund/node-event-store-competing-consumer.git"
   },
   "dependencies": {
     "promise-queue": "^2.2.3",

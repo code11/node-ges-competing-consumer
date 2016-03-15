@@ -4,7 +4,7 @@ import nock from 'nock'
 import EventStoreConsumer from '../lib'
 import {POLL_DELAY} from '../lib'
 
-describe('EventStoreConsumer', function() {
+describe('EventStoreCompetingConsumer', function() {
     let clock
 
     function expectRead(count, ids) {

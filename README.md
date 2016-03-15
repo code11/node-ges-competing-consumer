@@ -1,4 +1,4 @@
-# node-event-store-consumer
+# node-event-store-competing-consumer
 
 A Node.js utility for consuming Event Store Competing Consumer subscriptions using Event Store's HTTP API.
 
@@ -8,14 +8,14 @@ A Node.js utility for consuming Event Store Competing Consumer subscriptions usi
 Available on npm:
 
 ```sh
-npm install event-store-consumer
+npm install event-store-competing-consumer
 ```
 
 ## Documentation
 
-### `let consumer = new EventStoreConsumer(stream, group, handler, options)`
+### `let consumer = new EventStoreCompetingConsumer(stream, group, handler, options)`
 
-The `EventStoreConsumer` constructor takes the following arguments:
+The `EventStoreCompetingConsumer` constructor takes the following arguments:
 
 - `stream`: The stream to consume.
 - `group`: The name of the configured subscription group.
@@ -45,7 +45,7 @@ Tells the consumer to stop pulling. Returns a promise which resolves after all a
 ## Usage example (ES6)
 
 ```js
-import EventStoreConsumer from 'event-store-consumer'
+import EventStoreCompetingConsumer from 'event-store-competing-consumer'
 
 async function handler(event) {
     //`event` is the raw event from Event Store
@@ -56,7 +56,7 @@ async function handler(event) {
     await doImportantWork(data)
 }
 
-let consumer = new EventStoreConsumer('MyStream', 'my-group', handler, {
+let consumer = new EventStoreCompetingConsumer('MyStream', 'my-group', handler, {
     eventStoreUrl: 'http://eventstore.example.com:2113',
     concurrency: 5
 })
