@@ -5,10 +5,10 @@ set -e
 export NODE_ENV="test"
 export EVENT_STORE_URL="http://eventstore.test:2113"
 
-node_modules/babel-cli/bin/babel.js src --out-dir lib --source-maps inline
+node_modules/@babel/cli/bin/babel.js src --out-dir lib
 
 TZ=UTC node_modules/.bin/mocha \
     --reporter list \
-    --compilers js:babel-register \
-    --recursive \
+    --request @babel/register \
+    # --recursive \
     test

@@ -1,8 +1,8 @@
-import {expect} from 'chai'
+import pkg from 'chai'
+const {expect} = pkg
 import sinon from 'sinon'
 import nock from 'nock'
-import CompetingConsumer from '../lib'
-import {POLL_DELAY} from '../lib'
+import * as es from '../lib/index.js'
 
 describe('CompetingConsumer', function() {
     let clock
@@ -63,7 +63,7 @@ describe('CompetingConsumer', function() {
         let events = []
 
         //Setup consumer
-        let consumer = new CompetingConsumer('MyStream', 'my-service', function(event) {
+        let consumer = new es.default('MyStream', 'my-service', function(event) {
             events.push(event)
             if (event.eventId === 'ev2') {
                 return Promise.reject(new Error('Test error'))
@@ -107,7 +107,7 @@ describe('CompetingConsumer', function() {
 
     it('polls continually', function() {
         //Setup consumer
-        let consumer = new CompetingConsumer('MyStream', 'my-service', function() {
+        let consumer = new es.default('MyStream', 'my-service', function() {
         }, {concurrency: 10})
 
         let req = expectRead(10, [])
@@ -121,14 +121,14 @@ describe('CompetingConsumer', function() {
                 req.done()
 
                 //Next poll
-                clock.tick(POLL_DELAY)
+                clock.tick(es.POLL_DELAY)
                 return waitFor(consumer, 'poll')
             })
             .then(() => {
                 req2.done()
 
                 //One more
-                clock.tick(POLL_DELAY)
+                clock.tick(es.POLL_DELAY)
                 return waitFor(consumer, 'poll')
             })
             .then(() => {
@@ -142,11 +142,11 @@ describe('CompetingConsumer', function() {
 
     it('eventStoreUrl option wins', function() {
         //Setup consumer
-        let consumer = new CompetingConsumer('MyStream', 'my-service', function() {
+        let consumer = new es.default('MyStream', 'my-service', function() {
         }, {concurrency: 10, eventStoreUrl: 'http://override.eventstore.test:2113'})
 
         let req = nock('http://override.eventstore.test:2113')
-            .get('/subscriptions/MyStream/my-service/10?embed=Body')
+            .get('/subscriptions/MyStream/my-sßervice/10?embed=Body')
             .reply(200, {
                 entries: []
             })
