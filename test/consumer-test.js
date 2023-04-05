@@ -1,8 +1,8 @@
-import pkg from 'chai'
-const {expect} = pkg
-import sinon from 'sinon'
-import nock from 'nock'
-import * as es from '../lib/index.js'
+
+const {expect} = require('chai')
+const sinon = require('sinon')
+const nock = require('nock')
+const {CompetingConsumer, POLL_DELAY} = require('../lib/index.js')
 
 describe('CompetingConsumer', function() {
     let clock
@@ -14,16 +14,16 @@ describe('CompetingConsumer', function() {
                 links: [
                     {
                         relation: 'ack',
-                        uri: 'http://eventstore.test:2113/subscriptions/MyStream/my-service/ack/' + id
+                        uri: 'http://localhost:2113/subscriptions/MyStream/my-service/ack/' + id
                     },
                     {
                         relation: 'nack',
-                        uri: 'http://eventstore.test:2113/subscriptions/MyStream/my-service/nack/' + id
+                        uri: 'http://localhost:2113/subscriptions/MyStream/my-service/nack/' + id
                     }
                 ]
             }
         })
-        return nock('http://eventstore.test:2113')
+        return nock('http://localhost:2113')
             .get('/subscriptions/MyStream/my-service/' + count + '?embed=Body')
             .reply(200, {
                 entries
@@ -31,13 +31,13 @@ describe('CompetingConsumer', function() {
     }
 
     function expectAck(id) {
-        return nock('http://eventstore.test:2113')
+        return nock('http://localhost:2113')
             .post('/subscriptions/MyStream/my-service/ack/' + id)
             .reply(200)
     }
 
     function expectNack(id) {
-        return nock('http://eventstore.test:2113')
+        return nock('http://localhost:2113')
             .post('/subscriptions/MyStream/my-service/nack/' + id)
             .reply(200)
     }
@@ -63,7 +63,7 @@ describe('CompetingConsumer', function() {
         let events = []
 
         //Setup consumer
-        let consumer = new es.default('MyStream', 'my-service', function(event) {
+        let consumer = new CompetingConsumer('MyStream', 'my-service', function(event) {
             events.push(event)
             if (event.eventId === 'ev2') {
                 return Promise.reject(new Error('Test error'))
@@ -107,7 +107,7 @@ describe('CompetingConsumer', function() {
 
     it('polls continually', function() {
         //Setup consumer
-        let consumer = new es.default('MyStream', 'my-service', function() {
+        let consumer = new CompetingConsumer('MyStream', 'my-service', function() {
         }, {concurrency: 10})
 
         let req = expectRead(10, [])
@@ -121,14 +121,14 @@ describe('CompetingConsumer', function() {
                 req.done()
 
                 //Next poll
-                clock.tick(es.POLL_DELAY)
+                clock.tick(POLL_DELAY)
                 return waitFor(consumer, 'poll')
             })
             .then(() => {
                 req2.done()
 
                 //One more
-                clock.tick(es.POLL_DELAY)
+                clock.tick(POLL_DELAY)
                 return waitFor(consumer, 'poll')
             })
             .then(() => {
@@ -142,11 +142,10 @@ describe('CompetingConsumer', function() {
 
     it('eventStoreUrl option wins', function() {
         //Setup consumer
-        let consumer = new es.default('MyStream', 'my-service', function() {
-        }, {concurrency: 10, eventStoreUrl: 'http://override.eventstore.test:2113'})
-
-        let req = nock('http://override.eventstore.test:2113')
-            .get('/subscriptions/MyStream/my-sßervice/10?embed=Body')
+        let consumer = new CompetingConsumer('MyStream', 'my-service',
+                        function() {}, {concurrency: 10, eventStoreUrl: 'http://override.localhost:2113'})
+        let req = nock('http://override.localhost:2113')
+            .get('/subscriptions/MyStream/my-service/10?embed=Body')
             .reply(200, {
                 entries: []
             })

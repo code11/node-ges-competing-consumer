@@ -1,8 +1,12 @@
-import requestp from 'request-promise'
-import Queue from 'promise-queue'
-import {EventEmitter} from 'events'
+// import requestp from 'request-promise'
+// import Queue from 'promise-queue'
+// import {EventEmitter} from 'events'
 
-export const POLL_DELAY = 500 //ms
+const requestp = require('request-promise')
+const Queue = require('promise-queue')
+const EventEmitter = require('events').EventEmitter
+
+module.exports.POLL_DELAY = 500 //ms
 
 function noop() {
 }
@@ -11,7 +15,7 @@ function defaultOnError(e) {
     console.error('EventStoreConsumer error: ' + (e.stack || e))
 }
 
-export default class EventStoreConsumer extends EventEmitter {
+class EventStoreConsumer extends EventEmitter {
     constructor(stream, group, handler, {concurrency = 1, eventStoreUrl, onEvent, onAck, onNack, onError} = {}) {
         super()
         this.stream = stream
@@ -115,7 +119,7 @@ export default class EventStoreConsumer extends EventEmitter {
             return
         }
 
-        this.pollTimer = setTimeout(this.poll.bind(this), POLL_DELAY)
+        this.pollTimer = setTimeout(this.poll.bind(this), this.POLL_DELAY)
     }
 
     cancelScheduledPoll() {
@@ -203,3 +207,5 @@ export default class EventStoreConsumer extends EventEmitter {
             })
     }
 }
+
+module.exports.CompetingConsumer = EventStoreConsumer
