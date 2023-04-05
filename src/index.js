@@ -1,8 +1,4 @@
-// import requestp from 'request-promise'
-// import Queue from 'promise-queue'
-// import {EventEmitter} from 'events'
-
-const requestp = require('request-promise')
+const axios = require('axios')
 const Queue = require('promise-queue')
 const EventEmitter = require('events').EventEmitter
 
@@ -87,7 +83,7 @@ class EventStoreConsumer extends EventEmitter {
                     return
                 }
 
-                let {entries} = payload
+                const {entries} = payload.data
                 if (entries.length > 0) {
                     //Add each event to the queue
                     entries.forEach(event => {
@@ -186,16 +182,14 @@ class EventStoreConsumer extends EventEmitter {
     }
 
     request(method, url, {accept} = {}) {
-        let options = {
-            method,
-            url,
-            json: true,
+        const options = {
+            method: method,
+            url: url,
             headers: {
                 accept
             }
         }
-
-        return requestp(options)
+        return axios(options)
             .catch(e => {
                 if (e.name === 'StatusCodeError') {
                     let e2 = new Error(`EventStore error ${e.statusCode}: ${e.response.statusMessage}. Method: ${method}. URL: ${url}`)
