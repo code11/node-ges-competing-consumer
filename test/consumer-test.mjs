@@ -1,8 +1,8 @@
-
-const {expect} = require('chai')
-const sinon = require('sinon')
-const nock = require('nock')
-const {CompetingConsumer, POLL_DELAY} = require('../lib/index.js')
+import pkg from 'chai';
+const { expect } = pkg; 
+import Sinon from 'sinon'
+import nock from 'nock'
+import EventStoreConsumer, { POLL_DELAY } from '../src/index.js';
 
 describe('CompetingConsumer', function() {
     let clock
@@ -49,7 +49,7 @@ describe('CompetingConsumer', function() {
     }
 
     before(() => {
-        clock = sinon.useFakeTimers()
+        clock = Sinon.useFakeTimers()
         nock.disableNetConnect()
     })
 
@@ -63,7 +63,7 @@ describe('CompetingConsumer', function() {
         let events = []
 
         //Setup consumer
-        let consumer = new CompetingConsumer('MyStream', 'my-service', function(event) {
+        let consumer = new EventStoreConsumer('MyStream', 'my-service', function(event) {
             events.push(event)
             if (event.eventId === 'ev2') {
                 return Promise.reject(new Error('Test error'))
@@ -107,7 +107,7 @@ describe('CompetingConsumer', function() {
 
     it('polls continually', function() {
         //Setup consumer
-        let consumer = new CompetingConsumer('MyStream', 'my-service', function() {
+        let consumer = new EventStoreConsumer('MyStream', 'my-service', function() {
         }, {concurrency: 10})
 
         let req = expectRead(10, [])
@@ -142,7 +142,7 @@ describe('CompetingConsumer', function() {
 
     it('eventStoreUrl option wins', function() {
         //Setup consumer
-        let consumer = new CompetingConsumer('MyStream', 'my-service',
+        let consumer = new EventStoreConsumer('MyStream', 'my-service',
                         function() {}, {concurrency: 10, eventStoreUrl: 'http://override.localhost:2113'})
         let req = nock('http://override.localhost:2113')
             .get('/subscriptions/MyStream/my-service/10?embed=Body')

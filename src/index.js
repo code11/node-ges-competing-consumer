@@ -1,8 +1,8 @@
-const axios = require('axios')
-const Queue = require('promise-queue')
-const EventEmitter = require('events').EventEmitter
+import axios from 'axios'
+import PQueue from 'p-queue'
+import EventEmitter from 'events'
 
-module.exports.POLL_DELAY = 500 //ms
+export const POLL_DELAY = 500 //ms
 
 function noop() {
 }
@@ -11,7 +11,7 @@ function defaultOnError(e) {
     console.error('EventStoreConsumer error: ' + (e.stack || e))
 }
 
-class EventStoreConsumer extends EventEmitter {
+export default class EventStoreConsumer extends EventEmitter {
     constructor(stream, group, handler, {concurrency = 1, eventStoreUrl, onEvent, onAck, onNack, onError} = {}) {
         super()
         this.stream = stream
@@ -20,7 +20,7 @@ class EventStoreConsumer extends EventEmitter {
         this.concurrency = concurrency
         this.running = false
         this.polling = false
-        this.queue = new Queue(this.concurrency, Infinity)
+        this.queue = new PQueue({concurrency: this.concurrency})
 
         this.eventStoreUrl = eventStoreUrl || process.env.EVENT_STORE_URL
         if (!this.eventStoreUrl) {
@@ -52,7 +52,7 @@ class EventStoreConsumer extends EventEmitter {
     }
 
     getQueueLength() {
-        return this.queue.getQueueLength() + this.queue.getPendingLength()
+        return this.queue.size + this.queue.pending
     }
 
     poll() {
@@ -88,7 +88,7 @@ class EventStoreConsumer extends EventEmitter {
                     //Add each event to the queue
                     entries.forEach(event => {
                         this.queue.add(this.handleEvent.bind(this, event))
-                            .then(this.didHandleEvent.bind(this), e => console.log(e.stack))
+                                  .then(this.didHandleEvent.bind(this), e => console.log(e.stack))
                     })
 
                     //Poll immediately
@@ -156,7 +156,7 @@ class EventStoreConsumer extends EventEmitter {
         return this.ackNackHelper(event, 'nack')
     }
 
-    ackNackHelper(event, type) {
+    ackNackHelper(event, type, retries = 3, delayMs = 500) {
         if (type === 'ack') {
             this.onAck(event)
         } else {
@@ -173,12 +173,32 @@ class EventStoreConsumer extends EventEmitter {
         if (!url) {
             return Promise.resolve()
         }
-        return this.request('POST', url)
-            .catch(e => {
-                //Log the error, but don't throw it since we don't want a failed ack/nack to crash the process
-                //TODO: We could retry the ack/nack a few times before giving up
-                this.onError(e)
-            })
+        // return this.request('POST', url)
+        //     .catch(e => {
+        //         //Log the error, but don't throw it since we don't want a failed ack/nack to crash the process
+        //         //TODO: We could retry the ack/nack a few times before giving up
+        //         this.nack(event, 'nack')
+        //         this.onError(e)
+        //     })
+        let retryCount = 0
+        return new Promise((resolve, reject) => {
+            function doRequest() {
+                this.request('POST', url)
+                    .then(() => {
+                        resolve()
+                    })
+                    .catch(e => {
+                        retryCount++
+                        if (retryCount === retries) {
+                            this.onError(e)
+                            reject(e)
+                        } else {
+                            setTimeout(doRequest.bind(this), delayMs)
+                        }
+                    })
+            }
+            doRequest.call(this)
+        })
     }
 
     request(method, url, {accept} = {}) {
@@ -202,4 +222,4 @@ class EventStoreConsumer extends EventEmitter {
     }
 }
 
-module.exports.CompetingConsumer = EventStoreConsumer
+// module.exports.CompetingConsumer = EventStoreConsumer
