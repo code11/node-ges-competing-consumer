@@ -1,8 +1,6 @@
 import axios from 'axios'
 import PQueue from 'p-queue'
-import EventEmitter from 'events'
-
-export const POLL_DELAY = 500 //ms
+import {EventEmitter} from 'events'
 
 function noop() {
 }
@@ -11,26 +9,54 @@ function defaultOnError(e) {
     console.error('EventStoreConsumer error: ' + (e.stack || e))
 }
 
-export default class EventStoreConsumer extends EventEmitter {
-    constructor(stream, group, handler, {concurrency = 1, eventStoreUrl, onEvent, onAck, onNack, onError} = {}) {
+type EventStoreConsumerParams = {
+    stream: string,
+    group: string,
+    handler: (event: any) => void,
+    concurrency?: number,
+    eventStoreUrl?: string,
+    onEvent?: (event: any) => void,
+    onAck?: (event: any) => void,
+    onNack?: (event: any) => void,
+    onError?: (error: Error) => void,
+    pollDelay?: number
+}
+
+export class EventStoreConsumer extends EventEmitter {
+    stream: string;
+    group: string;
+    handler: (event: any) => void;
+    concurrency: number;
+    eventStoreUrl: string;
+    onEvent: (event: any) => void;
+    onAck: (event: any) => void;
+    onNack: (event: any) => void;
+    onError: (error: Error) => void;
+    running: boolean;
+    polling: boolean;
+    queue: PQueue;
+    pollTimer?: NodeJS.Timer;
+    pollDelay: number;
+
+    constructor(params: EventStoreConsumerParams) {
         super()
-        this.stream = stream
-        this.group = group
-        this.handler = handler
-        this.concurrency = concurrency
+        this.stream = params.stream
+        this.group = params.group
+        this.handler = params.handler
+        this.concurrency = params.concurrency || 1
         this.running = false
         this.polling = false
         this.queue = new PQueue({concurrency: this.concurrency})
-
-        this.eventStoreUrl = eventStoreUrl || process.env.EVENT_STORE_URL
+        this.pollDelay = params.pollDelay || 500
+        this.eventStoreUrl = params.eventStoreUrl || process.env.EVENT_STORE_URL || ""
         if (!this.eventStoreUrl) {
             throw new Error('Event Store URL must be supplied to EventStoreConsumer. Either set the `eventStoreUrl` option or set the `EVENT_STORE_URL` env variable.')
         }
 
-        this.onEvent = onEvent || noop
-        this.onAck = onAck || noop
-        this.onNack = onNack || noop
-        this.onError = onError || defaultOnError
+        this.onEvent = params.onEvent || noop
+        this.onAck = params.onAck || noop
+        this.onNack = params.onNack || noop
+        this.onError = params.onError || defaultOnError
     }
 
     start() {
@@ -75,7 +101,7 @@ export default class EventStoreConsumer extends EventEmitter {
         //Request up to `count` new events
         let url = `${this.eventStoreUrl}/subscriptions/${this.stream}/${this.group}/${count}?embed=Body`
 
-        this.request('GET', url, {accept: 'application/vnd.eventstore.competingatom+json'})
+        this.request('GET', url, 'application/vnd.eventstore.competingatom+json')
             .then(payload => {
                 this.polling = false
 
@@ -115,7 +141,7 @@ export default class EventStoreConsumer extends EventEmitter {
             return
         }
 
-        this.pollTimer = setTimeout(this.poll.bind(this), this.POLL_DELAY)
+        this.pollTimer = setTimeout(this.poll.bind(this), this.pollDelay)
     }
 
     cancelScheduledPoll() {
@@ -177,15 +203,14 @@ export default class EventStoreConsumer extends EventEmitter {
         //     .catch(e => {
         //         //Log the error, but don't throw it since we don't want a failed ack/nack to crash the process
         //         //TODO: We could retry the ack/nack a few times before giving up
-        //         this.nack(event, 'nack')
         //         this.onError(e)
         //     })
         let retryCount = 0
         return new Promise((resolve, reject) => {
             function doRequest() {
                 this.request('POST', url)
-                    .then(() => {
-                        resolve()
+                    .then((payload) => {
+                        resolve(payload?.data)
                     })
                     .catch(e => {
                         retryCount++
@@ -201,25 +226,15 @@ export default class EventStoreConsumer extends EventEmitter {
         })
     }
 
-    request(method, url, {accept} = {}) {
+    request(method: string, url: string, accept: string) {
         const options = {
             method: method,
             url: url,
             headers: {
-                accept
+                accept: accept
             }
         }
         return axios(options)
-            .catch(e => {
-                if (e.name === 'StatusCodeError') {
-                    let e2 = new Error(`EventStore error ${e.statusCode}: ${e.response.statusMessage}. Method: ${method}. URL: ${url}`)
-                    e2.code = 'EVENT_STORE_ERROR'
-                    e2.status = e.statusCode
-                    throw e2
-                }
-                throw e
-            })
+            .catch(e => { throw e })
     }
 }
-
-// module.exports.CompetingConsumer = EventStoreConsumer

@@ -8,7 +8,7 @@ A Node.js utility for consuming [(Get) Event Store](https://geteventstore.com) C
 Available on npm:
 
 ```sh
-npm install ges-competing-consumer
+npm install @c11/ges-competing-consumer
 ```
 
 ## Documentation
@@ -45,7 +45,7 @@ Tells the consumer to stop pulling. Returns a promise which resolves after all a
 ## Usage example
 
 ```js
-import CompetingConsumer from 'ges-competing-consumer'
+const {EventStoreConsumer} = require('../lib/index.js')
 
 function handler(event) {
     //`event` is the raw event from Event Store
@@ -56,10 +56,14 @@ function handler(event) {
     return doImportantWork(data) //returns a promise
 }
 
-let consumer = new CompetingConsumer('MyStream', 'my-group', handler, {
-    eventStoreUrl: 'http://eventstore.example.com:2113',
-    concurrency: 5
-})
+let params = {
+            stream: 'MyStream',
+            group: 'my-group',
+            handler: handler(event),
+            concurrency: 5
+        }
+
+let consumer = new EventStoreConsumer(params)
 
 //Start pulling events
 consumer.start()

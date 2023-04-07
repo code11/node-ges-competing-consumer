@@ -1,8 +1,7 @@
-import pkg from 'chai';
-const { expect } = pkg; 
-import Sinon from 'sinon'
-import nock from 'nock'
-import EventStoreConsumer, { POLL_DELAY } from '../src/index.js';
+const {expect} = require('chai')
+const sinon = require('sinon')
+const nock = require('nock')
+const {EventStoreConsumer} = require('../lib/index.js')
 
 describe('CompetingConsumer', function() {
     let clock
@@ -49,7 +48,7 @@ describe('CompetingConsumer', function() {
     }
 
     before(() => {
-        clock = Sinon.useFakeTimers()
+        clock = sinon.useFakeTimers()
         nock.disableNetConnect()
     })
 
@@ -62,24 +61,27 @@ describe('CompetingConsumer', function() {
     it('requests, acks and nacks', function() {
         let events = []
 
-        //Setup consumer
-        let consumer = new EventStoreConsumer('MyStream', 'my-service', function(event) {
-            events.push(event)
-            if (event.eventId === 'ev2') {
-                return Promise.reject(new Error('Test error'))
-            }
-            return Promise.resolve()
-        }, {
+        let params = {
+            stream: 'MyStream',
+            group: 'my-service',
+            handler: function(event) {
+                events.push(event)
+                if (event.eventId === 'ev2') {
+                    return Promise.reject(new Error('Test error'))
+                }
+                return Promise.resolve()
+            },
             concurrency: 5,
-            onError(e) {
+            onError: (e) => {
                 if (e.message === 'Test error') {
                     return
                 }
                 throw e
-            }
-        })
+            },
+        }
 
-
+        //Setup consumer
+        let consumer = new EventStoreConsumer(params)
         let req = expectRead(5, ['ev1', 'ev2'])
         let req2 = expectRead(3, [])
         let ackReq = expectAck('ev1')
@@ -107,8 +109,13 @@ describe('CompetingConsumer', function() {
 
     it('polls continually', function() {
         //Setup consumer
-        let consumer = new EventStoreConsumer('MyStream', 'my-service', function() {
-        }, {concurrency: 10})
+        let params = {
+            stream: 'MyStream',
+            group: 'my-service',
+            handler: function() {},
+            concurrency: 10,
+        }
+        let consumer = new EventStoreConsumer(params)
 
         let req = expectRead(10, [])
         let req2 = expectRead(10, [])
@@ -121,14 +128,14 @@ describe('CompetingConsumer', function() {
                 req.done()
 
                 //Next poll
-                clock.tick(POLL_DELAY)
+                clock.tick(consumer.pollDelay)
                 return waitFor(consumer, 'poll')
             })
             .then(() => {
                 req2.done()
 
                 //One more
-                clock.tick(POLL_DELAY)
+                clock.tick(consumer.pollDelay)
                 return waitFor(consumer, 'poll')
             })
             .then(() => {
@@ -142,8 +149,14 @@ describe('CompetingConsumer', function() {
 
     it('eventStoreUrl option wins', function() {
         //Setup consumer
-        let consumer = new EventStoreConsumer('MyStream', 'my-service',
-                        function() {}, {concurrency: 10, eventStoreUrl: 'http://override.localhost:2113'})
+        let params = {
+            stream: 'MyStream',
+            group: 'my-service',
+            handler: function() {},
+            concurrency: 10,
+            eventStoreUrl: 'http://override.localhost:2113'
+        }
+        let consumer = new EventStoreConsumer(params)
         let req = nock('http://override.localhost:2113')
             .get('/subscriptions/MyStream/my-service/10?embed=Body')
             .reply(200, {
